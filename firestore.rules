@@ -1,0 +1,173 @@
+/**
+ * @fileoverview Firestore Security Rules for Gowri Sankar Chit Funds application.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for user profiles, KYC, bank details, and payments.
+ * Chit groups have an admin-based access control model.
+ *
+ * Data Structure:
+ * - /users/{userId}: User profiles, owned by the user.
+ * - /users/{userId}/kyc: KYC details, owned by the user.
+ * - /users/{userId}/bankDetails: Bank details, owned by the user.
+ * - /users/{userId}/payments/{paymentId}: Payment information, owned by the user.
+ * - /chitGroups/{chitGroupId}: Chit groups, administered by a designated user.
+ *
+ * Key Security Decisions:
+ * - User listing is disallowed for privacy.
+ * - Data required for authorization decisions is denormalized (e.g., `adminId` in `chitGroups`) to avoid costly `get()` calls in rules.
+ * - The application's structure is segregated to isolate user-specific private data under the `/users/{userId}` path from public or shared data (e.g., `chitGroups`).
+ * - Only signed-in users can access data.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Protects user profile information. Only the user can read and write their own profile.
+     * @path /users/{userId}
+     * @allow (create) User with ID 'user123' creates their own profile with data including "id": "user123".
+     * @allow (get) User with ID 'user123' reads their own profile.
+     * @allow (update) User with ID 'user123' updates their own profile.
+     * @allow (delete) User with ID 'user123' deletes their own profile.
+     * @deny (create) User with ID 'user123' tries to create a profile with "id": "user456".
+     * @deny (get) User with ID 'user123' tries to read profile of user 'user456'.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if false; // Listing all users is not permitted.
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Protects KYC information for a user. Only the user can read and write their own KYC data.
+     * @path /users/{userId}/kyc
+     * @allow (create) User with ID 'user123' creates their KYC data under their profile.
+     * @allow (get) User with ID 'user123' reads their own KYC data.
+     * @allow (update) User with ID 'user123' updates their own KYC data.
+     * @allow (delete) User with ID 'user123' deletes their own KYC data.
+     * @deny (create) User with ID 'user123' tries to create KYC data under user 'user456'.
+     * @deny (get) User with ID 'user123' tries to read KYC data of user 'user456'.
+     * @principle Enforces document ownership for all operations within the user's subcollection.
+     */
+    match /users/{userId}/kyc {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isOwner(userId) && resource != null;
+      allow delete: if isOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description Protects bank details for a user. Only the user can read and write their own bank details.
+     * @path /users/{userId}/bankDetails
+     * @allow (create) User with ID 'user123' creates their bank details under their profile.
+     * @allow (get) User with ID 'user123' reads their own bank details.
+     * @allow (update) User with ID 'user123' updates their own bank details.
+     * @allow (delete) User with ID 'user123' deletes their own bank details.
+     * @deny (create) User with ID 'user123' tries to create bank details under user 'user456'.
+     * @deny (get) User with ID 'user123' tries to read bank details of user 'user456'.
+     * @principle Enforces document ownership for all operations within the user's subcollection.
+     */
+    match /users/{userId}/bankDetails {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isOwner(userId) && resource != null;
+      allow delete: if isOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description Protects payment information for a user. Only the user can read and write their own payment data.
+     * @path /users/{userId}/payments/{paymentId}
+     * @allow (create) User with ID 'user123' creates a payment under their profile.
+     * @allow (get) User with ID 'user123' reads their own payment.
+     * @allow (update) User with ID 'user123' updates their own payment.
+     * @allow (delete) User with ID 'user123' deletes their own payment.
+     * @deny (create) User with ID 'user123' tries to create a payment under user 'user456'.
+     * @deny (get) User with ID 'user123' tries to read payment of user 'user456'.
+     * @principle Enforces document ownership for all operations within the user's subcollection.
+     */
+    match /users/{userId}/payments/{paymentId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Protects chit group information. Only the admin of the chit group can modify it.  Any signed-in user can read.
+     * @path /chitGroups/{chitGroupId}
+     * @allow (get) Any signed-in user can read a chit group.
+     * @allow (list) Any signed-in user can list chit groups.
+     * @allow (create) User with ID 'user123' creates a chit group with data including "adminId": "user123".
+     * @allow (update) User with ID 'user123' updates a chit group where they are the admin ("adminId": "user123").
+     * @allow (delete) User with ID 'user123' deletes a chit group where they are the admin ("adminId": "user123").
+     * @deny (create) User with ID 'user123' tries to create a chit group with "adminId": "user456".
+     * @deny (update) User with ID 'user123' tries to update a chit group where user 'user456' is the admin.
+     * @principle Enforces admin-based access control for writes, allows public reads.
+     */
+    match /chitGroups/{chitGroupId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isAdmin(adminId) {
+        return request.auth.uid == adminId;
+      }
+
+      function isExistingAdmin(adminId) {
+        return isAdmin(adminId) && resource != null;
+      }
+
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isAdmin(request.resource.data.adminId);
+      allow update: if isExistingAdmin(resource.data.adminId);
+      allow delete: if isExistingAdmin(resource.data.adminId);
+    }
+  }
+}

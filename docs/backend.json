@@ -1,0 +1,285 @@
+
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a user profile within the Gowri Sankar Chit Funds application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user profile."
+        },
+        "name": {
+          "type": "string",
+          "description": "The user's full name."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        },
+        "avatarUrl": {
+          "type": "string",
+          "description": "URL of the user's avatar image.",
+          "format": "uri"
+        },
+        "kycId": {
+          "type": "string",
+          "description": "Reference to KYC details. (Relationship: UserProfile 1:1 KYC)"
+        },
+        "bankDetailsId": {
+          "type": "string",
+          "description": "Reference to BankDetails. (Relationship: UserProfile 1:1 BankDetails)"
+        },
+        "languagePreference": {
+          "type": "string",
+          "description": "The user's preferred language (e.g., 'en' for English, 'te' for Telugu')."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "email"
+      ]
+    },
+    "ChitGroup": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ChitGroup",
+      "type": "object",
+      "description": "Represents a Chit group within the Gowri Sankar Chit Funds application.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the chit group."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the chit group."
+        },
+        "chitValue": {
+          "type": "number",
+          "description": "Total value of the chit."
+        },
+        "monthlyInstallment": {
+          "type": "number",
+          "description": "Amount of each monthly installment."
+        },
+        "durationMonths": {
+          "type": "number",
+          "description": "Duration of the chit in months."
+        },
+        "adminId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who is the admin. (Relationship: UserProfile 1:N ChitGroup)"
+        },
+        "memberIds": {
+          "type": "array",
+          "description": "References to UserProfiles who are members of this chit group. (Relationship: UserProfile N:N ChitGroup)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "chitValue",
+        "monthlyInstallment",
+        "durationMonths",
+        "adminId"
+      ]
+    },
+    "Payment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Payment",
+      "type": "object",
+      "description": "Represents a payment made by a user for a chit group.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the payment."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who made the payment. (Relationship: UserProfile 1:N Payment)"
+        },
+        "chitGroupId": {
+          "type": "string",
+          "description": "Reference to the ChitGroup for which the payment was made. (Relationship: ChitGroup 1:N Payment)"
+        },
+        "amount": {
+          "type": "number",
+          "description": "Amount of the payment."
+        },
+        "paymentDate": {
+          "type": "string",
+          "description": "Date and time when the payment was made.",
+          "format": "date-time"
+        },
+        "paymentMethod": {
+          "type": "string",
+          "description": "Method used for the payment (e.g., UPI, Net Banking, Debit/Credit Card)."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "chitGroupId",
+        "amount",
+        "paymentDate",
+        "paymentMethod"
+      ]
+    },
+    "KYC": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "KYC",
+      "type": "object",
+      "description": "Represents Know Your Customer (KYC) details for a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the KYC details."
+        },
+        "aadhaarNumber": {
+          "type": "string",
+          "description": "Aadhaar number of the user."
+        },
+        "panNumber": {
+          "type": "string",
+          "description": "PAN number of the user."
+        }
+      },
+      "required": [
+        "id",
+        "aadhaarNumber",
+        "panNumber"
+      ]
+    },
+    "BankDetails": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "BankDetails",
+      "type": "object",
+      "description": "Represents bank details for a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the bank details."
+        },
+        "accountNumber": {
+          "type": "string",
+          "description": "Bank account number of the user."
+        },
+        "ifscCode": {
+          "type": "string",
+          "description": "IFSC code of the user's bank."
+        },
+        "bankName": {
+          "type": "string",
+          "description": "Name of the bank."
+        }
+      },
+      "required": [
+        "id",
+        "accountNumber",
+        "ifscCode",
+        "bankName"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores user profile information. This collection uses path-based ownership, where only the user can access their profile data.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/kyc",
+        "definition": {
+          "entityName": "KYC",
+          "schema": {
+            "$ref": "#/backend/entities/KYC"
+          },
+          "description": "Stores KYC information for each user. This is a subcollection under the user's profile, ensuring that only the user can access their KYC data.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/bankDetails",
+        "definition": {
+          "entityName": "BankDetails",
+          "schema": {
+            "$ref": "#/backend/entities/BankDetails"
+          },
+          "description": "Stores bank details for each user. This is a subcollection under the user's profile, ensuring that only the user can access their bank details.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/payments/{paymentId}",
+        "definition": {
+          "entityName": "Payment",
+          "schema": {
+            "$ref": "#/backend/entities/Payment"
+          },
+          "description": "Stores payment information for each user. Each payment document includes the userId and chitGroupId for easy querying and linking to user profiles and chit groups. This structure uses path-based ownership, where only the user can access their payment data.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user."
+            },
+            {
+              "name": "paymentId",
+              "description": "The unique identifier for the payment."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/chitGroups/{chitGroupId}",
+        "definition": {
+          "entityName": "ChitGroup",
+          "schema": {
+            "$ref": "#/backend/entities/ChitGroup"
+          },
+          "description": "Stores chit group information. Each chit group document includes the `adminId` to denote the group administrator, allowing for authorization without needing to `get()` the user's profile.",
+          "params": [
+            {
+              "name": "chitGroupId",
+              "description": "The unique identifier for the chit group."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to support the Gowri Sankar Chit Funds application, focusing on user authentication, chit management, payments, and KYC/Bank details. Authorization Independence is achieved through path-based ownership for user-related data and denormalization where needed. For example, `chitGroups` includes the `adminId` to ensure that access control can be enforced without needing to `get()` the user's profile.  Collections are segregated based on their security posture (e.g., user profiles are separated from chit groups).  The structure also facilitates secure `list` operations by ensuring that collections contain documents with homogeneous security requirements. Roles are managed implicitly through document ownership (e.g., a user is an admin of a chit group if they created it, as denoted by the adminId). User profile, KYC, and bank details are stored under the `/users/{userId}` path, providing clear ownership. Chit groups are stored in a separate collection, with each chit group document containing the `adminId` to denote the group administrator. Payment information is stored in a `payments` subcollection under each user, linking payment activity to the user who made the payment."
+  }
+}
