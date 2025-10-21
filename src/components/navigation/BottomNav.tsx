@@ -19,7 +19,7 @@ export default function BottomNav() {
   const { t } = useLanguage();
 
   return (
-    <nav className="fixed bottom-0 left-1/2 z-50 h-20 w-full max-w-md -translate-x-1/2 border-t bg-background/80 backdrop-blur-md sm:bottom-[calc(5vh-1px)] sm:rounded-b-2xl">
+    <nav className="fixed bottom-0 left-1/2 z-50 h-20 w-full max-w-md -translate-x-1/2 border-t bg-background sm:bottom-[calc(5vh-1px)] sm:rounded-b-2xl">
       <div className="grid h-full grid-cols-4">
         {navItems.map((item) => {
           const isActive =
