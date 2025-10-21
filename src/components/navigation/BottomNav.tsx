@@ -32,8 +32,8 @@ export default function BottomNav() {
               className={cn(
                 'flex flex-col items-center justify-center gap-1 text-xs font-medium transition-colors',
                 isActive
-                  ? 'text-primary'
-                  : 'text-muted-foreground hover:text-primary'
+                  ? 'text-foreground'
+                  : 'text-muted-foreground hover:text-foreground'
               )}
             >
               <item.icon className="h-6 w-6" />
